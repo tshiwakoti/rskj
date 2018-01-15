@@ -234,7 +234,9 @@ public class TransactionExecutor {
             BigInteger txGasCost = toBI(tx.getGasPrice()).multiply(txGasLimit);
             track.addBalance(tx.getSender().getBytes(), txGasCost.negate());
 
-            logger.trace("Paying: txGasCost: [{}], gasPrice: [{}], gasLimit: [{}]", txGasCost, toBI(tx.getGasPrice()), txGasLimit);
+            if (logger.isTraceEnabled()){
+                logger.trace("Paying: txGasCost: [{}], gasPrice: [{}], gasLimit: [{}]", txGasCost, toBI(tx.getGasPrice()), txGasLimit);
+            }
         }
 
         if (tx.isContractCreation()) {
@@ -328,6 +330,11 @@ public class TransactionExecutor {
         transfer(cacheTrack, tx.getSender().getBytes(), newContractAddress, endowment);
     }
 
+    private void execError(Throwable err) {
+        logger.warn("execError: ", err);
+        executionError = err.getMessage();
+    }
+
     private void execError(String err) {
         logger.warn(err);
         executionError = err;
@@ -402,7 +409,7 @@ public class TransactionExecutor {
 //            https://github.com/ethereum/cpp-ethereum/blob/develop/libethereum/Executive.cpp#L241
             cacheTrack.rollback();
             mEndGas = BigInteger.ZERO;
-            execError(e.getMessage());
+            execError(e);
 
         }
     }
