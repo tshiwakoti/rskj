@@ -65,7 +65,7 @@ public class LevelDbDataSource implements KeyValueDataSource {
 
     public LevelDbDataSource(String name) {
         this.name = name;
-        logger.info("New LevelDbDataSource: {}", name);
+        logger.debug("New LevelDbDataSource: {}", name);
     }
 
     @Override

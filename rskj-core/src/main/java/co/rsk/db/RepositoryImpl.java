@@ -324,7 +324,7 @@ public class RepositoryImpl implements Repository, org.ethereum.facade.Repositor
     @Override
     public synchronized void updateBatch(Map<ByteArrayWrapper, AccountState> stateCache,
                                          Map<ByteArrayWrapper, ContractDetails> detailsCache) {
-        logger.info("updatingBatch: detailsCache.size: {}", detailsCache.size());
+        logger.debug("updatingBatch: detailsCache.size: {}", detailsCache.size());
 
         for (Map.Entry<ByteArrayWrapper, AccountState> entry : stateCache.entrySet()) {
             ByteArrayWrapper hash = entry.getKey();
@@ -363,7 +363,7 @@ public class RepositoryImpl implements Repository, org.ethereum.facade.Repositor
             }
         }
 
-        logger.info("updated: detailsCache.size: {}", detailsCache.size());
+        logger.debug("updated: detailsCache.size: {}", detailsCache.size());
 
         stateCache.clear();
         detailsCache.clear();

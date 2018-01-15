@@ -184,11 +184,9 @@ public class TransactionExecutor {
 
         if (!isCovers(senderBalance, totalCost)) {
 
-            if (logger.isWarnEnabled()) {
-                logger.warn("Not enough cash: Require: {}, Sender cash: {}, tx {}", totalCost, senderBalance, Hex.toHexString(tx.getHash()));
-                logger.warn("Transaction Data: {}", tx);
-                logger.warn("Tx Included in the following block: {}", this.executionBlock);
-            }
+            logger.warn("Not enough cash: Require: {}, Sender cash: {}, tx {}", totalCost, senderBalance, Hex.toHexString(tx.getHash()));
+            logger.warn("Transaction Data: {}", tx);
+            logger.warn("Tx Included in the following block: {}", this.executionBlock);
 
             execError(String.format("Not enough cash: Require: %s, Sender cash: %s", totalCost, senderBalance));
 
@@ -198,24 +196,20 @@ public class TransactionExecutor {
         // Prevent transactions with excessive address size
         byte[] receiveAddress = tx.getReceiveAddress().getBytes();
         if (receiveAddress != null && !Arrays.equals(receiveAddress, EMPTY_BYTE_ARRAY) && receiveAddress.length > Constants.getMaxAddressByteLength()) {
-            if (logger.isWarnEnabled()) {
-                logger.warn("Receiver address to long: size: {}, tx {}", receiveAddress.length, Hex.toHexString(tx.getHash()));
-                logger.warn("Transaction Data: {}", tx);
-                logger.warn("Tx Included in the following block: {}", this.executionBlock);
-            }
+            logger.warn("Receiver address to long: size: {}, tx {}", receiveAddress.length, Hex.toHexString(tx.getHash()));
+            logger.warn("Transaction Data: {}", tx);
+            logger.warn("Tx Included in the following block: {}", this.executionBlock);
 
             return false;
         }
 
         if (!tx.acceptTransactionSignature()) {
-            if (logger.isWarnEnabled()) {
-                logger.warn("Transaction {} signature not accepted: {}", Hex.toHexString(tx.getHash()), tx.getSignature());
-                logger.warn("Transaction Data: {}", tx);
-                logger.warn("Tx Included in the following block: {}", this.executionBlock);
-            }
+            logger.warn("Transaction {} signature not accepted: {}", Hex.toHexString(tx.getHash()), tx.getSignature());
+            logger.warn("Transaction Data: {}", tx);
+            logger.warn("Tx Included in the following block: {}", this.executionBlock);
 
             panicProcessor.panic("invalidsignature", String.format("Transaction %s signature not accepted: %s", Hex.toHexString(tx.getHash()), tx.getSignature().toString()));
-            execError("Transaction signature not accepted: " + tx.getSignature());
+            execError(String.format("Transaction signature not accepted: %s", tx.getSignature().toString()));
 
             return false;
         }
@@ -230,7 +224,7 @@ public class TransactionExecutor {
             return;
         }
 
-        logger.info("Execute transaction {} {}", toBI(tx.getNonce()), Hex.toHexString(tx.getHash()));
+        logger.trace("Execute transaction {} {}", toBI(tx.getNonce()), Hex.toHexString(tx.getHash()));
 
         if (!localCall) {
 
@@ -240,9 +234,7 @@ public class TransactionExecutor {
             BigInteger txGasCost = toBI(tx.getGasPrice()).multiply(txGasLimit);
             track.addBalance(tx.getSender().getBytes(), txGasCost.negate());
 
-            if (logger.isInfoEnabled()) {
-                logger.info("Paying: txGasCost: [{}], gasPrice: [{}], gasLimit: [{}]", txGasCost, toBI(tx.getGasPrice()), txGasLimit);
-            }
+            logger.trace("Paying: txGasCost: [{}], gasPrice: [{}], gasLimit: [{}]", txGasCost, toBI(tx.getGasPrice()), txGasLimit);
         }
 
         if (tx.isContractCreation()) {
@@ -257,7 +249,7 @@ public class TransactionExecutor {
             return;
         }
 
-        logger.info("Call transaction {} {}", toBI(tx.getNonce()), Hex.toHexString(tx.getHash()));
+        logger.trace("Call transaction {} {}", toBI(tx.getNonce()), Hex.toHexString(tx.getHash()));
 
         byte[] targetAddress = tx.getReceiveAddress().getBytes();
 
@@ -275,8 +267,8 @@ public class TransactionExecutor {
             if (!localCall && txGasLimit.compareTo(BigInteger.valueOf(requiredGas)) < 0) {
                 // no refund
                 // no endowment
-                execError("Out of Gas calling precompiled contract 0x" + Hex.toHexString(targetAddress) +
-                        ", required: " + (requiredGas + basicTxCost) + ", left: " + mEndGas);
+                execError(String.format("Out of Gas calling precompiled contract 0x %s, required: %d, left: %s ",
+                        Hex.toHexString(targetAddress), (requiredGas + basicTxCost), mEndGas));
                 mEndGas = BigInteger.ZERO;
                 return;
             } else {
@@ -352,7 +344,7 @@ public class TransactionExecutor {
             return;
         }
 
-        logger.info("Go transaction {} {}", toBI(tx.getNonce()), Hex.toHexString(tx.getHash()));
+        logger.trace("Go transaction {} {}", toBI(tx.getNonce()), Hex.toHexString(tx.getHash()));
 
         try {
 
@@ -439,7 +431,7 @@ public class TransactionExecutor {
             return;
         }
 
-        logger.info("Finalize transaction {} {}", toBI(tx.getNonce()), Hex.toHexString(tx.getHash()));
+        logger.trace("Finalize transaction {} {}", toBI(tx.getNonce()), Hex.toHexString(tx.getHash()));
 
         cacheTrack.commit();
 
@@ -477,20 +469,20 @@ public class TransactionExecutor {
             }
         }
 
-        logger.info("Building transaction execution summary");
+        logger.trace("Building transaction execution summary");
 
         TransactionExecutionSummary summary = summaryBuilder.build();
 
         // Refund for gas leftover
         track.addBalance(tx.getSender().getBytes(), summary.getLeftover().add(summary.getRefund()));
-        logger.info("Pay total refund to sender: [{}], refund val: [{}]", tx.getSender(), summary.getRefund());
+        logger.trace("Pay total refund to sender: [{}], refund val: [{}]", tx.getSender(), summary.getRefund());
 
         // Transfer fees to miner
         BigInteger summaryFee = summary.getFee();
 
         //TODO: REMOVE THIS WHEN THE LocalBLockTests starts working with REMASC
         if(RskSystemProperties.CONFIG.isRemascEnabled()) {
-            logger.info("Adding fee to remasc contract account");
+            logger.trace("Adding fee to remasc contract account");
             track.addBalance(PrecompiledContracts.REMASC_ADDR.getBytes(), summaryFee);
         } else {
             track.addBalance(coinbase, summaryFee);
@@ -499,7 +491,7 @@ public class TransactionExecutor {
         this.paidFees = summaryFee;
 
         if (result != null) {
-            logger.info("Processing result");
+            logger.trace("Processing result");
             logs = notRejectedLogInfos;
 
             result.getCodeChanges().forEach((key, value) -> track.saveCode(key.getLast20Bytes(), value));
@@ -511,7 +503,7 @@ public class TransactionExecutor {
             listener.onTransactionExecuted(summary);
         }
 
-        logger.info("tx listener done");
+        logger.trace("tx listener done");
 
         if (CONFIG.vmTrace() && program != null && result != null) {
             ProgramTrace trace = program.getTrace().result(result.getHReturn()).error(result.getException());
@@ -522,13 +514,13 @@ public class TransactionExecutor {
                     listener.onVMTraceCreated(txHash, trace);
                 }
             } catch (IOException e) {
-                String errorMessage = "Cannot write trace to file";
-                panicProcessor.panic("executor", errorMessage + ": " + e);
-                logger.error(errorMessage, e);
+                String errorMessage = String.format("Cannot write trace to file: %s", e.getMessage());
+                panicProcessor.panic("executor", errorMessage);
+                logger.error(errorMessage);
             }
         }
 
-        logger.info("tx finalization done");
+        logger.trace("tx finalization done");
     }
 
     public TransactionExecutor setLocalCall(boolean localCall) {
